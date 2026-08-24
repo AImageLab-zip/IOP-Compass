@@ -1,0 +1,804 @@
+/*
+ * Dark clinical theme.
+ *
+ * Two constraints drive it. The canvas must be the brightest thing on screen, so
+ * every surface around it is a low-chroma neutral and only one accent hue is used.
+ * And the whole interface has to sit in one viewport with no page scroll, because
+ * a screenshot of it goes into the manuscript.
+ */
+
+:root {
+  --bg: #0d1117;
+  --surface: #141a22;
+  --surface-2: #1a212b;
+  --surface-3: #222b38;
+  --border: #26303d;
+  --border-strong: #33404f;
+
+  --text: #e6edf3;
+  --text-dim: #9aa8b8;
+  --text-faint: #64748b;
+
+  --accent: #38bdf8;
+  --accent-dim: #0e7490;
+  --good: #34d399;
+  --warn: #fbbf24;
+  --bad: #f87171;
+
+  /* FDI overlay colours, keyed by quadrant. Distinguishable in print and to the
+     most common colour-vision deficiencies. */
+  --q1: #f472b6;
+  --q2: #a78bfa;
+  --q3: #38bdf8;
+  --q4: #fbbf24;
+
+  --radius: 6px;
+  --header-h: 52px;
+  --status-h: 30px;
+
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+input,
+select {
+  font: inherit;
+  color: inherit;
+  background: var(--surface-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 5px 8px;
+}
+
+input:focus,
+select:focus,
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-faint);
+}
+
+/* ------------------------------------------------------------------ layout */
+
+.app {
+  display: grid;
+  grid-template-rows: var(--header-h) 1fr var(--status-h);
+  height: 100%;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 216px 1fr 272px;
+  min-height: 0;
+}
+
+.pane {
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.pane--left {
+  border-right: 1px solid var(--border);
+}
+
+.pane--right {
+  border-left: 1px solid var(--border);
+}
+
+.pane__title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  height: 34px;
+  flex: none;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  border-bottom: 1px solid var(--border);
+}
+
+.pane__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.pane__footer {
+  flex: none;
+  padding: 10px;
+  border-top: 1px solid var(--border);
+}
+
+/* ------------------------------------------------------------------ header */
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex: none;
+}
+
+.brand__mark {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.brand__sub {
+  font-size: 10px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.patient {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+}
+
+.patient__label {
+  font-size: 10px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.patient__input {
+  width: 132px;
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 4px 8px;
+}
+
+/* The pipeline chips: a reader of the screenshot should see
+   view classification -> segmenter -> post-processing without a caption. */
+.pipeline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 100px;
+  background: var(--surface-2);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.chip--active {
+  border-color: var(--accent-dim);
+  background: rgba(56, 189, 248, 0.08);
+}
+
+.chip--idle {
+  opacity: 0.45;
+}
+
+.chip__key {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.chip__value {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text);
+}
+
+.chip__arrow {
+  color: var(--text-faint);
+  font-size: 12px;
+}
+
+/* ------------------------------------------------------------- view strip */
+
+.views {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+}
+
+.view {
+  display: grid;
+  grid-template-columns: 54px 1fr;
+  gap: 9px;
+  align-items: center;
+  padding: 6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  text-align: left;
+  width: 100%;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.view:hover {
+  background: var(--surface-3);
+}
+
+.view--active {
+  border-color: var(--accent);
+  background: rgba(56, 189, 248, 0.07);
+}
+
+.view__thumb {
+  width: 54px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 3px;
+  background: var(--bg);
+  display: block;
+}
+
+.view__meta {
+  min-width: 0;
+}
+
+.view__name {
+  font-size: 11.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.view__sub {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-faint);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--text-faint);
+}
+.dot--pending { background: var(--text-faint); }
+.dot--running { background: var(--accent); animation: pulse 1.1s ease-in-out infinite; }
+.dot--done { background: var(--good); }
+.dot--error { background: var(--bad); }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+/* ---------------------------------------------------------------- canvas */
+
+/* The stage wraps the canvas so the floating toolbar can be positioned against it.
+   Both need an explicit flex basis of zero: a flex child sized by its content
+   reports a zero-width box to the ResizeObserver, and Konva then renders nothing. */
+.stage {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+}
+
+.canvas {
+  position: relative;
+  flex: 1 1 0;
+  background: #080c11;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.canvas__empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 32px;
+  text-align: center;
+  color: var(--text-dim);
+}
+
+.canvas__empty h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.canvas__empty p {
+  margin: 0;
+  max-width: 400px;
+  line-height: 1.55;
+  font-size: 12.5px;
+}
+
+.canvas__busy {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(8, 12, 17, 0.72);
+  backdrop-filter: blur(2px);
+  font-size: 12.5px;
+  z-index: 5;
+}
+
+.spinner {
+  width: 15px;
+  height: 15px;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Floating overlays on the canvas, so the image keeps the full pane. */
+.canvas__toolbar {
+  position: absolute;
+  z-index: 4;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  background: rgba(20, 26, 34, 0.94);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  backdrop-filter: blur(6px);
+}
+
+.tool {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.tool:hover:not(:disabled) {
+  background: var(--surface-3);
+  color: var(--text);
+}
+
+.tool--active {
+  background: var(--accent-dim);
+  color: #fff;
+}
+
+.tool:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.tool__sep {
+  width: 1px;
+  height: 18px;
+  background: var(--border-strong);
+  margin: 0 3px;
+}
+
+.legend__item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legend__swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+}
+
+.canvas__zoom {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  background: rgba(20, 26, 34, 0.94);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.canvas__zoom button {
+  min-width: 24px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 3px;
+  color: var(--text-dim);
+}
+
+.canvas__zoom button:hover {
+  background: var(--surface-3);
+  color: var(--text);
+}
+
+.canvas__zoom span {
+  min-width: 42px;
+  text-align: center;
+  color: var(--text-dim);
+}
+
+/* ------------------------------------------------------------- instances */
+
+.instances {
+  display: flex;
+  flex-direction: column;
+}
+
+.instance {
+  display: grid;
+  grid-template-columns: 10px 40px 1fr auto;
+  gap: 9px;
+  align-items: center;
+  padding: 6px 12px;
+  border-left: 2px solid transparent;
+  text-align: left;
+  width: 100%;
+  font-size: 12px;
+}
+
+.instance:hover {
+  background: var(--surface-2);
+}
+
+.instance--active {
+  background: var(--surface-3);
+  border-left-color: var(--accent);
+}
+
+.instance__swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.instance__fdi {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.instance__fdi--unset {
+  color: var(--warn);
+  font-weight: 400;
+}
+
+.instance__meta {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-faint);
+}
+
+.instance__flag {
+  font-size: 11px;
+  color: var(--warn);
+}
+
+/* -------------------------------------------------------------- controls */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.field__label {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.field__row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.field select,
+.field input[type="text"] {
+  width: 100%;
+}
+
+.field input[type="range"] {
+  flex: 1;
+  accent-color: var(--accent);
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+.field__value {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  min-width: 34px;
+  text-align: right;
+}
+
+.hint {
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--text-faint);
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-3);
+  font-size: 12.5px;
+  font-weight: 500;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--border-strong);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  background: var(--accent-dim);
+  border-color: var(--accent-dim);
+  color: #fff;
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #04202b;
+}
+
+.btn--small {
+  width: auto;
+  padding: 4px 9px;
+  font-size: 11px;
+}
+
+.fdi-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+  padding: 9px 12px;
+}
+
+.fdi-grid button {
+  padding: 4px 0;
+  border-radius: 3px;
+  background: var(--surface-2);
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.fdi-grid button:hover {
+  background: var(--surface-3);
+  color: var(--text);
+}
+
+/* A code already used in this image is de-emphasised but stays readable: it is
+   still clickable, because reassigning a number is how a swap gets fixed. */
+.fdi-grid button.is-taken {
+  color: var(--text-faint);
+  background: transparent;
+}
+
+.fdi-grid button.is-current {
+  background: var(--accent-dim);
+  color: #fff;
+}
+
+/* ---------------------------------------------------------------- status */
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 14px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--text-faint);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.status__item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.status__item strong {
+  color: var(--text-dim);
+  font-weight: 500;
+}
+
+.status__sep {
+  color: var(--border-strong);
+}
+
+.status__right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.status--error {
+  color: var(--bad);
+}
+
+/* ---------------------------------------------------------------- upload */
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0 0 10px;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.summary div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.summary dt {
+  font-size: 10.5px;
+  color: var(--text-faint);
+}
+
+.summary dd {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.summary__warn {
+  color: var(--warn);
+}
+
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 22px 14px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--text-faint);
+  font-size: 11.5px;
+  text-align: center;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.dropzone--over {
+  border-color: var(--accent);
+  background: rgba(56, 189, 248, 0.06);
+  color: var(--text);
+}
+
+.dropzone strong {
+  color: var(--text-dim);
+  font-weight: 500;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

@@ -1,0 +1,57 @@
+# Final release cohort: 1,000 patients x 5 views = 5,000 images.
+dataset:
+  name: final_1000
+  root: /work/grana_maxillo/lborghi/datasets/iop_compass/IOP_Dataset_final
+  derived_root: /work/grana_maxillo/lborghi/datasets/iop_compass/derived/final_1000
+
+  patient_dir_regex: '^Patient_(?P<pid>\d+)$'
+  image_pattern: 'IOP_{view_token}_RawImage_{pid}.png'
+  annotation_pattern: 'IOP_{view_token}_{pid}.json'
+
+  view_map:
+    Center: frontal
+    Left: left_buccal
+    Right: right_buccal
+    Upper: upper_occlusal
+    Down: lower_occlusal
+
+  views_required: [frontal, left_buccal, right_buccal, upper_occlusal, lower_occlusal]
+
+  fdi_labels: [11, 12, 13, 14, 15, 16, 17, 18,
+               21, 22, 23, 24, 25, 26, 27, 28,
+               31, 32, 33, 34, 35, 36, 37, 38,
+               41, 42, 43, 44, 45, 46, 47, 48]
+
+
+# Working resolutions.  Both are recorded in every result file.
+#   inference_long_side: resolution the segmentation models see.  Both stages of
+#     SegmentAnyTooth work internally at fixed sizes (YOLO11 letterboxes to 640,
+#     SAM-HQ embeds at 1024), so this only bounds buffer sizes.
+#   eval_long_side: resolution at which every reference and predicted mask is
+#     compared, which makes the metric independent of the sensor resolution
+#     (2,283 distinct sizes occur in this cohort).
+resolution:
+  inference_long_side: 2048
+  eval_long_side: 1024
+  classifier_image_size: 256
+
+audit:
+  drop_zero_area_instances: true
+  min_instance_area_warn: 200
+  missing_file_tolerance: 0.0
+  view_quadrant_check: true
+  # Below this share of expected-quadrant teeth the filename view label is only
+  # flagged; below `view_quadrant_conflict_threshold` it is treated as a genuine
+  # view mix-up and the patient is excluded from the experimental cohort.
+  view_quadrant_min_agreement: 0.60
+  view_quadrant_conflict_threshold: 0.40
+  # Contours may exceed the image by a few pixels from rounding; beyond this the
+  # annotation was made against a differently sized image and is unusable.
+  contour_overshoot_tolerance_px: 8
+
+splits:
+  seed: 42
+  n_train: 700
+  n_val: 200
+  n_test: 100
+  require_exact: true

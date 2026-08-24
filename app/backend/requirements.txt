@@ -1,0 +1,5 @@
+# The viewer imports iop_compass, so torch, torchvision, opencv, numpy, scipy and
+# pyyaml come from the project environment (requirements-lock.txt).  These are the
+# only additions the server itself needs.
+flask>=3.0
+flask-cors>=4.0

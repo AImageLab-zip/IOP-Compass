@@ -1,0 +1,29 @@
+# Mask R-CNN ResNet50-FPN supervised in-dataset baseline.
+# No hyperparameter search is performed; these are standard torchvision detection
+# settings.  Checkpoint selection uses validation FDI-aware instance F1.
+maskrcnn:
+  # 15, not 30: the validation FDI-F1 plateaus by ~15 epochs, and checkpoint
+  # selection uses validation F1 so later epochs cannot improve the served weight.
+  # The cap roughly halves the per-seed runtime.
+  epochs: 15
+  batch_size: 2
+  lr: 5.0e-3
+  weight_decay: 1.0e-4
+  momentum: 0.9
+  num_workers: 4
+  amp: true
+  # Kept low so the evaluator sees the full precision/recall trade-off; the
+  # reported operating point is chosen on validation, never on test.
+  score_threshold: 0.05
+  mask_threshold: 0.5
+  # 32 permanent teeth plus a margin for duplicate detections.
+  max_detections: 64
+  # Horizontal flip with the contralateral FDI remap (11<->21, 46<->36, ...).
+  hflip_prob: 0.5
+  # 4, not 8: the checkpoint is selected on validation, so epochs after the peak can
+  # never improve the served weight -- they only cost time.
+  early_stopping_patience: 4
+  trainable_backbone_layers: 3
+  # Operating point search on validation: the score threshold that maximises
+  # FDI-aware instance F1 is selected and recorded.
+  select_score_thresholds: [0.05, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80]

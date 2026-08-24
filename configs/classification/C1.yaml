@@ -1,0 +1,42 @@
+# C1 - ImageNet-pretrained ResNet18 with the clinically plausible augmentation
+# envelope.  This is the principal configuration; it is also the one evaluated
+# with patient-set constrained assignment.
+variant: C1
+model:
+  arch: resnet18
+  pretrained: true
+train:
+  epochs: 40
+  batch_size: 32
+  lr: 1.0e-4
+  weight_decay: 1.0e-5
+  optimizer: adamw
+  scheduler: cosine
+  warmup_epochs: 1
+  amp: true
+  early_stopping_patience: 8
+  num_workers: 4
+augmentation:
+  enabled: true
+  # Rotation is capped at 20 degrees: a clinical acquisition is never further
+  # off-axis than that, and larger rotations make the occlusal views ambiguous.
+  rotation_deg: 20.0
+  translate_frac: 0.10
+  scale_min: 0.90
+  scale_max: 1.10
+  brightness: 0.25
+  contrast: 0.25
+  saturation: 0.25
+  hue: 0.03
+  blur_prob: 0.20
+  blur_sigma_max: 1.0
+  noise_prob: 0.20
+  noise_std: 0.02
+  jpeg_prob: 0.20
+  jpeg_quality_min: 60
+  jpeg_quality_max: 95
+  # Horizontal flip is applied together with the left<->right label remap.
+  hflip_prob: 0.50
+  # No vertical flip: an upside-down intraoral photograph is not a plausible
+  # acquisition and would make upper/lower occlusal views indistinguishable.
+  vflip_prob: 0.0

@@ -1,0 +1,41 @@
+# Label-wise post-processing.
+#
+# The dataclass defaults reproduce the upstream rules, including the three constants
+# that were hard-coded inside its far-side artefact test.
+postprocessing:
+  # Morphological closing of the individual instance mask: closes the thin gap
+  # left by a specular highlight on enamel.
+  tooth_close_k: 3
+  # Opening is off: it erodes thin incisal edges.
+  tooth_open_k: 0
+  # A tooth crown is simply connected in a photograph.
+  fill_holes: true
+
+  # Speckle removal from the mask decoder.
+  min_component_area: 10
+  min_label_pixels: 6
+
+  # A component must agree with the ROI, not merely touch it.
+  min_roi_overlap_pixels: 6
+  min_roi_overlap_frac: 0.03
+  # Mostly-in-exclusion components are lips, gloves or retractors.
+  max_exclusion_overlap_frac: 0.45
+
+  # Reconnects a crown split by a bracket or an archwire, accepted only while the
+  # result stays anchored to the original detection.
+  bridge_close_k: 3
+  min_seed_overlap_pixels: 8
+  min_seed_overlap_frac: 0.05
+  keep_only_components_touching_original: true
+
+  # Buccal views show the contralateral arch out of focus at the far image border;
+  # narrow slivers there are artefacts.
+  far_side_enabled: true
+  side_far_border_frac: 0.10
+  side_far_max_width_frac: 0.07
+  side_far_max_roi_frac: 0.008
+  side_far_min_exclusion_frac: 0.16
+
+  # Upstream declared this flag but never applied it; enabling it keeps cleaning
+  # from fragmenting one instance into several.
+  keep_only_best_component_per_label: true

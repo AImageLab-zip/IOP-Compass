@@ -1,0 +1,49 @@
+# R1 geometric prior and R2 learned single-box ROI.
+geometric_prior:
+  # Robust percentiles rather than extrema: one badly framed acquisition must not
+  # widen the prior to the whole image.
+  low_percentile: 2.0
+  high_percentile: 98.0
+  # Margin as a fraction of the fitted box size, to absorb framing variation.
+  margin_frac: 0.05
+
+learned_roi:
+  # Target box = bounding box of the tooth union expanded by this fraction.
+  target_margin_frac: 0.05
+  epochs: 12
+  batch_size: 4
+  lr: 5.0e-3
+  weight_decay: 1.0e-4
+  momentum: 0.9
+  # Boxes below this detector score are treated as "no ROI found" and the image
+  # falls back to full-image inference.
+  score_threshold: 0.30
+  num_workers: 4
+  amp: true
+  inference_margin_frac: 0.0
+
+sam3_roi:
+  long_side: 1400
+  roi_close_k: 7
+  roi_open_k: 2
+  min_roi_area: 16000
+  min_exclusion_area: 1400
+  fragment_min_area: 700
+  crop_pad: 110
+  allowed_expand_px: 14
+  exclusion_expand_px: 4
+  subtract_exclusion_from_roi: false
+  fill_holes_flag: true
+  score_thr_mouth: 0.16
+  # Wrapper-level plausibility guard.  A returned mask filling less than this
+  # fraction of its own bounding box is rejected and the image falls back to the
+  # full frame.
+  min_box_fill: 0.70
+  mouth_prompts:
+    - mouth
+    - oral cavity
+    - inside the mouth
+    - intraoral region
+    - mouth opening
+    - teeth and gums
+    - visible mouth interior

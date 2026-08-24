@@ -1,0 +1,19 @@
+# C0 - ImageNet-pretrained ResNet18, minimal preprocessing, no stochastic
+# augmentation.  Reference point for what the augmentation actually buys.
+variant: C0
+model:
+  arch: resnet18
+  pretrained: true
+train:
+  epochs: 40
+  batch_size: 32
+  lr: 1.0e-4
+  weight_decay: 1.0e-5
+  optimizer: adamw
+  scheduler: cosine
+  warmup_epochs: 1
+  amp: true
+  early_stopping_patience: 8
+  num_workers: 4
+augmentation:
+  enabled: false
