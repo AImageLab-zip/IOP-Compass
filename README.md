@@ -34,11 +34,11 @@ faster. Both are selectable in the viewer.
 
 ---
 
-## Weights
+## Dataset & Weights
 
 > **Download:** <https://ditto.ing.unimore.it/iop-compass/>
 >
-> Drop both files into `weights/` at the repository root.
+> Note: for model weights drop us an email at federico.bolelli[at]unimore.it 
 
 The viewer needs exactly two weights:
 
