@@ -22,9 +22,13 @@ export const getConfig = () => request("/config");
 
 export const getHealth = () => request("/health");
 
-export function createCase(files, patientId) {
+// `mirrorAcquisition` tells the backend whether these photographs were taken through
+// an intraoral mirror. When they were, the backend flips them on ingest so the models
+// run in the left/right convention the cohort was annotated in.
+export function createCase(files, patientId, mirrorAcquisition = true) {
   const form = new FormData();
   if (patientId) form.append("patient_id", patientId);
+  form.append("mirror_acquisition", mirrorAcquisition ? "true" : "false");
   files.forEach((file) => form.append("images", file));
   return request("/cases", { method: "POST", body: form });
 }

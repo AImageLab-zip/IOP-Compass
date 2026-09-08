@@ -56,6 +56,23 @@ def mask_to_polygons(
     return polygons
 
 
+def mirror_polygons_x(polygons: list[list[float]], width: int) -> list[list[float]]:
+    """Reflect ``polygons`` horizontally within a ``width``-wide image.
+
+    Used for a photograph that was flipped on ingest so the models saw the cohort's
+    left/right convention: the contours come back in that flipped frame and have to
+    be returned in the uploaded photograph's frame.  The reflection is exact and its
+    own inverse, so no resampling error accumulates.
+    """
+    limit = float(width - 1)
+    out: list[list[float]] = []
+    for flat in polygons:
+        mirrored = list(flat)
+        mirrored[0::2] = [round(limit - float(x), 2) for x in flat[0::2]]
+        out.append(mirrored)
+    return out
+
+
 def polygons_to_mask(
     polygons: list[list[float]], width: int, height: int
 ) -> np.ndarray:

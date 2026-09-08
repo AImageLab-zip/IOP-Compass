@@ -54,6 +54,13 @@ class CaseImage:
     content_type: str
     view: str | None = None
     view_confidence: float = 0.0
+    #: True when :attr:`bgr` is a horizontal mirror of :attr:`original_bytes`.
+    #: Photographs acquired *through* an intraoral mirror are flipped on the way in
+    #: so every model runs in the single left/right convention the cohort was
+    #: annotated in; the contours are flipped back before they leave the API, so
+    #: everything the clinician sees and everything ``/save`` writes stays in the
+    #: uploaded photograph's frame.  See :func:`api.create_case`.
+    flipped: bool = False
 
 
 @dataclass

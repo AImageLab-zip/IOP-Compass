@@ -12,9 +12,11 @@ result can be tied to the exact weights that produced it:
     separate non-commercial agreement shipped with them;
   * the SAM 3 package and checkpoint.
 
-Override any location with the matching environment variable. If an asset is
-missing the script reports it as a blocked dependency and exits non-zero, so a
-missing licence never turns into a silently different experiment.
+Override any location with the matching environment variable. A missing *required*
+asset is reported as a blocked dependency and the script exits non-zero, so a
+missing licence never turns into a silently different experiment. SAM 3 is optional:
+it is used only by the R3 ROI strategy of the benchmark, which the released viewer
+and ``docs/inference.md`` never run, so its absence is recorded and tolerated.
 """
 
 from __future__ import annotations
@@ -35,36 +37,43 @@ TARGET = REPO / "third_party"
 ASSETS = {
     "segmentanytooth_src": {
         "env": "SAT_CODE_DIR",
-        "default": "/work/yazelelew_phd/Tooth_Segmentation/SegmentAnyTooth_Dependance",
+        "default": str(REPO / "inputs" / "SegmentAnyTooth"),
         "kind": "dir",
+        "required": True,
         "licence": "MIT (code)",
-        "note": "provides the `segmentanytooth` and `sam` modules",
+        "note": "clone of github.com/thangngoc89/SegmentAnyTooth; provides `sam`",
     },
     "sat_weights": {
         "env": "SAT_WEIGHT_DIR",
-        "default": str(REPO / "inputs" / "SegmentAnyTooth weights"),
+        "default": str(REPO / "weights" / "SegmentAnyTooth weights"),
         "kind": "dir",
+        "required": True,
         "licence": "separate non-commercial agreement (see the PDF shipped with the weights)",
         "note": "segmentanytooth_vit_tiny.pt + per-view YOLO11 detectors; not redistributed",
     },
     "sam3": {
         "env": "SAM3_CODE_DIR",
-        "default": "/work/yazelelew_phd/Tooth_Segmentation_App/backend/sam3",
+        "default": str(REPO / "inputs" / "sam3"),
         "kind": "dir",
+        "required": False,
         "licence": "Meta SAM 3 licence",
-        "note": "importable `sam3` package",
+        "note": "importable `sam3` package; R3 ROI only, not used by the viewer",
     },
     "sam3.pt": {
         "env": "SAM3_CHECKPOINT",
         "default": str(REPO / "inputs" / "sam3.pt"),
         "kind": "file",
+        "required": False,
         "licence": "Meta SAM 3 licence",
-        "note": "local checkpoint; keeps inference offline",
+        "note": "local checkpoint; R3 ROI only, keeps inference offline",
     },
+    # Not an obtained asset: a cache directory this script owns, created on demand so
+    # `TORCH_HOME` always points somewhere writable.
     "torch_home": {
         "env": "TORCH_HOME",
         "default": str(TARGET / "torch_home"),
-        "kind": "dir",
+        "kind": "cache_dir",
+        "required": True,
         "licence": "torchvision (BSD)",
         "note": "ImageNet / COCO backbones pre-downloaded so compute nodes need no network",
     },
@@ -80,19 +89,28 @@ def main() -> int:
     TARGET.mkdir(parents=True, exist_ok=True)
     inventory: dict[str, dict] = {}
     missing: list[str] = []
+    optional_absent: list[str] = []
 
     for name, spec in ASSETS.items():
         source = Path(os.environ.get(spec["env"], spec["default"]))
         link = TARGET / name
+        if spec["kind"] == "cache_dir":
+            source.mkdir(parents=True, exist_ok=True)
         entry = {
             "source": str(source),
             "env_var": spec["env"],
             "licence": spec["licence"],
             "note": spec["note"],
+            "required": spec["required"],
             "present": source.exists(),
         }
         if not source.exists():
-            missing.append(f"{name} (expected at {source}, override with ${spec['env']})")
+            if spec["required"]:
+                missing.append(
+                    f"{name} (expected at {source}, override with ${spec['env']})"
+                )
+            else:
+                optional_absent.append(f"{name} (would be at {source})")
         else:
             if link.is_symlink() or link.exists():
                 if link.is_symlink() and Path(os.readlink(link)) != source:
@@ -109,7 +127,10 @@ def main() -> int:
                     for p in sorted(source.glob("*.pt"))
                 }
         inventory[name] = entry
-        state = "ok" if entry["present"] else "MISSING"
+        if entry["present"]:
+            state = "ok"
+        else:
+            state = "MISSING" if spec["required"] else "absent"
         print(f"[third_party] {name:22s} {state:8s} {source}")
 
     if args.record:
@@ -118,7 +139,15 @@ def main() -> int:
         path.write_text(json.dumps(inventory, indent=1))
         print(f"[third_party] inventory -> {path}")
 
+    if optional_absent:
+        print("\n[third_party] optional, absent (the viewer does not need these):")
+        for item in optional_absent:
+            print(f"[third_party]   - {item}")
+
     if missing:
+        # The report below goes to stderr; flush stdout first so the per-asset lines
+        # above are not interleaved after it.
+        sys.stdout.flush()
         print("\n[third_party] BLOCKED DEPENDENCIES:", file=sys.stderr)
         for item in missing:
             print(f"[third_party]   - {item}", file=sys.stderr)

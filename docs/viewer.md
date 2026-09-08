@@ -9,7 +9,7 @@ what the model got wrong.
 
 ```
 photographs → view classification → segmenter (full image) → post-processing → FDI instances
-                  ResNet18 C1          SAT or Mask R-CNN       frozen config
+                  ResNet18             SAT or Mask R-CNN       frozen config
 ```
 
 The viewer does not implement any of these stages. It calls the same modules the
@@ -21,6 +21,23 @@ benchmark called — `classification.models`, `classification.constrained_assign
 image on the primary outcome, so the two cells the viewer serves are
 `no-roi+sat+post` and `no-roi+mask-rcnn+post`. Every `/segment` response carries its
 `cell`, so a clinical result can be traced to a row of the benchmark table.
+
+**Mirror acquisition is a per-case tick, and it is not cosmetic.** The cohort's buccal
+labels agree with the FDI quadrants its annotations contain — `src/iop_compass/data/validation.py`
+declares `left_buccal → (2, 3)` and the audit excludes any image whose annotation
+quadrants indicate the opposite view — so there is exactly one left/right convention
+the view classifier and SegmentAnyTooth's per-view detectors were trained in.
+
+Ticking the box says the photographs were taken through an intraoral mirror, and the
+backend then flips each image once at ingest, before any model sees it. That is
+deliberately a flip of the image rather than a relabelling of the prediction:
+SegmentAnyTooth picks a per-view detector and, for the left view, applies a horizontal
+flip and a remapped class table, so a merely renamed view would still yield the wrong
+tooth *numbers*. The uploaded bytes are never modified and `/segment` reflects the
+contours back, so everything the clinician sees and everything `save` writes stays in
+the uploaded photograph's frame; `mirror_acquisition` is recorded in each
+`_annotations.json` as provenance. The tick locks once a case is open, because it is
+applied at upload.
 
 **View classification is joint when it can be.** With exactly five images the labels
 are resolved under a one-to-one image/view constraint rather than independently: a
@@ -41,12 +58,19 @@ make dev         # API on :5000, UI on http://localhost:5173
 variable that relocates it. To serve one segmenter only, so the other's checkpoint is
 not required: `make backend SEGMENTERS=sat`.
 
+The SegmentAnyTooth path needs the upstream source as well as the weights: `sat`
+loads `sam_load` / `sam_predict` from it. The code is MIT and is cloned into
+`inputs/SegmentAnyTooth`, the weights go in `weights/SegmentAnyTooth weights/`, and
+`scripts/fetch_third_party.py` links both into `third_party/` —
+[Where everything goes](../README.md#where-everything-goes) is the full layout,
+including the two names the release checkpoints must be renamed to.
+
 | variable | default |
 | --- | --- |
 | `IOPC_WEIGHTS_DIR` | `weights/` |
 | `IOPC_CLASSIFIER_WEIGHTS` | `weights/view_classifier.pt` |
 | `IOPC_MASKRCNN_WEIGHTS` | `weights/maskrcnn.pt` |
-| `SAT_WEIGHT_DIR`, `SAT_CODE_DIR` | `third_party/sat_weights`, `third_party/segmentanytooth_src` |
+| `SAT_WEIGHT_DIR`, `SAT_CODE_DIR` | `third_party/sat_weights`, `third_party/segmentanytooth_src` (both symlinks made by `scripts/fetch_third_party.py`) |
 | `IOPC_POSTPROCESSING_CONFIG` | `configs/segmentation/postprocessing.yaml` |
 | `IOPC_OUTPUT_DIR` | `app/backend/outputs` |
 | `IOPC_DEVICE` | `cuda` (falls back to CPU with a warning) |
@@ -60,7 +84,7 @@ not required: `make backend SEGMENTERS=sat`.
 | --- | --- |
 | `GET /api/health` | readiness, device, which segmenters are loaded |
 | `GET /api/config` | views, segmenters and their cells, the FDI vocabulary |
-| `POST /api/cases` | upload N photographs, get a case and per-image ids |
+| `POST /api/cases` | upload N photographs (form field `mirror_acquisition`, default true), get a case and per-image ids |
 | `GET /api/cases/<case>/images/<image>` | the original photograph |
 | `POST /api/cases/<case>/classify` | predict the view of every image of the case |
 | `POST /api/cases/<case>/segment` | segment one image with a chosen segmenter |
@@ -127,7 +151,13 @@ they never went through a correction interface.
 cd app && make smoke
 ```
 
-Uploads one held-out patient's five photographs through the real HTTP API, runs both
+**This needs the dataset.** It reads `<derived_root>/manifest.csv`,
+`<derived_root>/splits.json` and the patient images named by the manifest, all
+resolved from `configs/dataset_final_1000.yaml` — so it runs against a prepared
+cohort, not against a fresh checkout. Without the dataset it exits with
+`no complete val patient with readable images`.
+
+It uploads one held-out patient's five photographs through the real HTTP API, runs both
 segmenters, and asserts that the predicted views match the manifest, that every FDI
 code is in the permanent-dentition vocabulary, that the instance counts are within
 tolerance of the reference, and that a saved mask comes back at the uploaded

@@ -46,8 +46,8 @@ These are hard-coded or defaulted, and are wrong for any other site:
 | `IOPC_RUN_DIR` | where provenance JSON is written |
 | `IOPC_ENV` | site script sourced by the `Makefile` before the venv |
 | `TEXROOT` | the user-space TeX Live prefix |
-| `SAT_CODE_DIR`, `SAT_WEIGHT_DIR` | SegmentAnyTooth source and weights |
-| `SAM3_CODE_DIR`, `SAM3_CHECKPOINT` | SAM 3 source and checkpoint |
+| `SAT_CODE_DIR`, `SAT_WEIGHT_DIR` | SegmentAnyTooth source and weights; both required, defaults in `scripts/fetch_third_party.py` |
+| `SAM3_CODE_DIR`, `SAM3_CHECKPOINT` | SAM 3 source and checkpoint; optional, needed only by the R3 ROI strategy |
 
 The partition and constraint defaults live in `scripts/slurm_util.py`; change them
 there for a different scheduler rather than patching each call site.

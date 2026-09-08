@@ -33,7 +33,13 @@ import numpy as np
 import torch
 
 from config import Settings
-from contours import mask_to_polygons, polygons_area, polygons_bbox, polygons_centroid
+from contours import (
+    mask_to_polygons,
+    mirror_polygons_x,
+    polygons_area,
+    polygons_bbox,
+    polygons_centroid,
+)
 from iop_compass.classification.constrained_assignment import constrained_assign
 from iop_compass.classification.dataset import (
     IMAGENET_MEAN,
@@ -53,7 +59,7 @@ log = logging.getLogger(__name__)
 SEGMENTERS = ("sat", "mask-rcnn")
 SEGMENTER_LABELS = {
     "sat": "SegmentAnyTooth",
-    "mask-rcnn": "Mask R-CNN R50-FPN (in-dataset)",
+    "mask-rcnn": "Mask R-CNN",
 }
 #: The grid cell each viewer segmenter corresponds to, recorded in every response so
 #: a result can always be traced to the row of the benchmark table it came from.
@@ -168,7 +174,11 @@ class Pipeline:
         """Load every enabled model now, so the first clinical request is not the slow one."""
         self.classifier()
         for segmenter in self.segmenters:
-            self._segmenter(segmenter)
+            model = self._segmenter(segmenter)
+            # SegmentAnyToothRunner defers its own weights until the first predict, so
+            # constructing it is not loading it.
+            if hasattr(model, "load"):
+                model.load()
 
     # ------------------------------------------------------------------ models
     def classifier(self) -> torch.nn.Module:
@@ -263,12 +273,20 @@ class Pipeline:
         view: str,
         segmenter: str = "sat",
         postprocess: bool = True,
+        flipped: bool = False,
     ) -> SegmentationResult:
         """Segment one image and return instances in its original coordinates.
 
         The image is downscaled to ``inference_long_side`` for the forward pass, the
         same bound the benchmark used, and every contour is scaled back afterwards
         so an exported mask matches the uploaded photograph pixel for pixel.
+
+        ``flipped`` says that ``image_bgr`` is already a horizontal mirror of the
+        photograph the clinician uploaded -- the compensation for an acquisition made
+        through an intraoral mirror, applied at ingest so the detector and its
+        side-specific FDI class table run in the convention they were trained in.
+        The contours are reflected back at the end, so a caller always receives the
+        uploaded photograph's coordinates whichever way the image came in.
         """
         if segmenter not in self.segmenters:
             raise ValueError(
@@ -317,6 +335,10 @@ class Pipeline:
             contours = mask_to_polygons(mask, scale_x, scale_y)
             if not contours:
                 continue
+            if flipped:
+                # Back into the uploaded photograph's frame, before the derived
+                # geometry below is computed from these points.
+                contours = mirror_polygons_x(contours, width)
             instances.append(
                 Instance(
                     instance_id=f"i{index}",

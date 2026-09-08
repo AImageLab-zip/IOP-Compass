@@ -5,7 +5,7 @@ import Header from "./components/Header";
 import InstancePanel from "./components/InstancePanel";
 import StatusBar from "./components/StatusBar";
 import Toolbar from "./components/Toolbar";
-import ViewStrip, { UploadZone } from "./components/ViewStrip";
+import ViewStrip, { MirrorToggle, UploadZone } from "./components/ViewStrip";
 import { duplicateFdis } from "./lib/fdi";
 import { centroid, mergeInstances, splitInstance } from "./lib/geometry";
 import { useCase } from "./state/useCase";
@@ -21,6 +21,8 @@ export default function App() {
   const [showLabels, setShowLabels] = useState(true);
   const [notice, setNotice] = useState(null);
   const [patientDraft, setPatientDraft] = useState("");
+  // Intraoral photography is normally done through a mirror, so that is the default.
+  const [mirrorAcquisition, setMirrorAcquisition] = useState(true);
 
   useEffect(() => {
     api
@@ -73,10 +75,14 @@ export default function App() {
   const handleFiles = useCallback(
     async (files) => {
       setNotice(null);
-      const uploaded = await uploadAndClassify(files, patientDraft);
+      const uploaded = await uploadAndClassify(
+        files,
+        patientDraft,
+        mirrorAcquisition
+      );
       if (uploaded) setNotice(`${uploaded.length} image(s) classified`);
     },
-    [patientDraft, uploadAndClassify]
+    [patientDraft, uploadAndClassify, mirrorAcquisition]
   );
 
   const setFdi = useCallback(
@@ -191,6 +197,8 @@ export default function App() {
           onFiles={handleFiles}
           instances={instances}
           constrained={caseState.constrained}
+          mirrorAcquisition={mirrorAcquisition}
+          onMirrorAcquisitionChange={setMirrorAcquisition}
         />
 
         {activeImage ? (
@@ -231,7 +239,12 @@ export default function App() {
                 the full image with the benchmark&rsquo;s post-processing. Correct
                 whatever the model got wrong and save.
               </p>
-              <div style={{ width: 320 }}>
+              <div style={{ width: 320, display: "grid", gap: 10 }}>
+                <MirrorToggle
+                  value={mirrorAcquisition}
+                  onChange={setMirrorAcquisition}
+                  locked={false}
+                />
                 <UploadZone onFiles={handleFiles} />
               </div>
               {busy && (

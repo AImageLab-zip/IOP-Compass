@@ -63,6 +63,14 @@ def _handle_unexpected(exc: Exception):
     return jsonify({"error": f"{type(exc).__name__}: {exc}"}), 500
 
 
+def _form_flag(name: str, default: bool) -> bool:
+    """Read a checkbox-shaped form field, tolerating the spellings HTML forms send."""
+    raw = request.form.get(name)
+    if raw is None or raw == "":
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _pipeline():
     return current_app.extensions["iopc_pipeline"]
 
@@ -131,7 +139,17 @@ def config():
 # ---------------------------------------------------------------------- cases
 @api.post("/cases")
 def create_case():
-    """Accept the photographs of one patient and register them as a case."""
+    """Accept the photographs of one patient and register them as a case.
+
+    ``mirror_acquisition`` (default true) states whether the photographs were taken
+    through an intraoral mirror.  When they were, each image is horizontally flipped
+    here, once, before any model sees it: the view classifier, the per-view
+    SegmentAnyTooth detector and its side-specific FDI class table then all operate in
+    the one left/right convention the annotated cohort was labelled in, so the tooth
+    *numbers* come out right and not merely the view's name.  The original bytes are
+    kept untouched, and ``/segment`` reflects the contours back, so what the clinician
+    sees and what ``/save`` writes remain in the uploaded frame.
+    """
     files = request.files.getlist("images")
     if not files:
         raise ApiError("no images uploaded; expected one or more 'images' parts")
@@ -142,6 +160,7 @@ def create_case():
         or patient_id_from_filename(files[0].filename),
         "unknown_patient",
     )
+    mirror_acquisition = _form_flag("mirror_acquisition", True)
     case = _store().create(patient_id)
 
     for index, item in enumerate(files):
@@ -164,6 +183,10 @@ def create_case():
 
         image_id = f"img{index}"
         height, width = decoded.shape[:2]
+        if mirror_acquisition:
+            # A flip preserves the dimensions, so width/height above still describe
+            # both frames.
+            decoded = cv2.flip(decoded, 1)
         case.images[image_id] = CaseImage(
             image_id=image_id,
             filename=item.filename or f"{image_id}.png",
@@ -173,13 +196,21 @@ def create_case():
             bgr=decoded,
             original_bytes=raw,
             content_type=item.mimetype,
+            flipped=mirror_acquisition,
         )
 
-    log.info("case %s: %d image(s) for %s", case.case_id, len(case.images), patient_id)
+    log.info(
+        "case %s: %d image(s) for %s, mirror_acquisition=%s",
+        case.case_id,
+        len(case.images),
+        patient_id,
+        mirror_acquisition,
+    )
     return jsonify(
         {
             "case_id": case.case_id,
             "patient_id": case.patient_id,
+            "mirror_acquisition": mirror_acquisition,
             "images": [
                 {
                     "image_id": image.image_id,
@@ -262,6 +293,7 @@ def segment(case_id: str):
         view=view,
         segmenter=segmenter,
         postprocess=bool(payload.get("postprocess", True)),
+        flipped=image.flipped,
     )
     log.info(
         "case %s image %s: %s -> %d instance(s) in %.2fs",
@@ -315,6 +347,11 @@ def save(case_id: str):
             "patient_id": case.patient_id,
             "case_name": stem,
             "view": view,
+            # Whether the photograph was a mirror acquisition.  Geometry here is
+            # always in the uploaded frame, so this is provenance, not something a
+            # reader has to apply; `iop_compass.data.adapter` reads only the keys it
+            # knows and ignores this one.
+            "mirror_acquisition": image.flipped,
             "image_width": image.width,
             "image_height": image.height,
             "annotation_count": len(teeth),

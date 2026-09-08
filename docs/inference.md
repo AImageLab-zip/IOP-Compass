@@ -13,16 +13,31 @@ export PYTHONPATH=$PWD/src:$PWD/third_party
 export TORCH_HOME=$PWD/third_party/torch_home
 ```
 
-Download the release weights into `weights/` (see the weights table in the
-[README](../README.md)) and obtain the SegmentAnyTooth assets separately — they are
-covered by a non-commercial licence and are not redistributed here. Then:
+The lock file pins its own `--extra-index-url`; the torch and torchvision wheels
+carry a `+cu126` local version and are not on PyPI.
+
+Then put the weights and the vendor code in place. In full, with the exact names the
+loaders expect, this is
+[Where everything goes](../README.md#where-everything-goes) in the README; the short
+version is four paths:
+
+| what | where it goes |
+| --- | --- |
+| view classifier checkpoint | `weights/view_classifier.pt` (rename of `classifier__*.pt`) |
+| Mask R-CNN checkpoint | `weights/maskrcnn.pt` (rename of `maskrcnn__*.pt`) |
+| SegmentAnyTooth weights (non-commercial, by email) | `weights/SegmentAnyTooth weights/` |
+| SegmentAnyTooth source (MIT, `git clone`) | `inputs/SegmentAnyTooth/` |
+
+Then link them:
 
 ```bash
 python scripts/fetch_third_party.py
 ```
 
-It downloads nothing and accepts no licence for you: it links assets already present,
-records their SHA-256, and exits non-zero listing anything missing.
+It downloads nothing and accepts no licence for you: it links assets already present
+and records their SHA-256. It exits non-zero only if a SegmentAnyTooth asset is
+missing; SAM 3 belongs to the ROI arm of the benchmark, which nothing on this page
+runs, so its absence is reported and tolerated.
 
 ## Classify the view
 

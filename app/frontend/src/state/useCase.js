@@ -99,9 +99,9 @@ export function useCase() {
    * one cannot be segmented at all.
    */
   const uploadAndClassify = useCallback(
-    (files, patientId) =>
+    (files, patientId, mirrorAcquisition = true) =>
       run("Uploading and classifying", async () => {
-        const created = await api.createCase(files, patientId);
+        const created = await api.createCase(files, patientId, mirrorAcquisition);
         const classified = await api.classifyCase(created.case_id);
         const byId = Object.fromEntries(
           classified.predictions.map((p) => [p.image_id, p])
@@ -123,6 +123,7 @@ export function useCase() {
           patientId: created.patient_id,
           images,
           constrained: classified.constrained,
+          mirrorAcquisition: created.mirror_acquisition !== false,
         });
         setActiveImageId(images[0]?.image_id ?? null);
         return images;

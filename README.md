@@ -40,20 +40,86 @@ faster. Both are selectable in the viewer.
 >
 > Note: for model weights drop us an email at federico.bolelli[at]unimore.it 
 
-The viewer needs exactly two weights:
+### Where everything goes
+
+Four things have to be put in place by hand. This is the layout to end up with —
+`third_party/` is *generated* and should never be populated manually:
+
+```
+IOP-Compass/
+├── weights/
+│   ├── view_classifier.pt              ← rename/symlink of classifier__*.pt
+│   ├── maskrcnn.pt                     ← rename/symlink of maskrcnn__*.pt
+│   └── SegmentAnyTooth weights/        ← the SAT weight directory, unpacked as-is
+│       ├── segmentanytooth_vit_tiny.pt
+│       ├── segmentanytooth_yolo11_front.pt
+│       ├── segmentanytooth_yolo11_upper.pt
+│       ├── segmentanytooth_yolo11_lower.pt
+│       └── segmentanytooth_yolo11_right.pt
+├── inputs/
+│   └── SegmentAnyTooth/                ← the MIT vendor code, git-cloned
+│       ├── sam.py
+│       └── utils.py
+└── third_party/                        ← symlinks, created by fetch_third_party.py
+    ├── sat_weights      -> ../weights/SegmentAnyTooth weights
+    ├── segmentanytooth_src -> ../inputs/SegmentAnyTooth
+    └── torch_home
+```
+
+`weights/` and `inputs/` are the only two directories you touch. Both are
+git-ignored, so nothing you put there can be committed by accident.
+
+#### 1. The two release weights
 
 | file | what it is |
 | --- | --- |
 | `view_classifier.pt` | ResNet18 five-view orientation classifier — assigns each photograph its clinical view |
 | `maskrcnn.pt` | Mask R-CNN R50-FPN tooth-instance segmenter |
 
-**SegmentAnyTooth (SAT) weights** are the default segmenter but are covered by a
-separate non-commercial licence and are **not redistributed here**. To obtain them,
-email the maintainers. Once you have them, point `SAT_WEIGHT_DIR` and `SAT_CODE_DIR`
-at them.
+They are emailed under the name of the training run that produced them, so rename or
+symlink them to the two names above — the viewer does no filename guessing and will
+refuse to start otherwise:
 
-The viewer does not apply an ROI stage, so no ROI-detector, geometric-prior or SAM 3
-weights are needed.
+```bash
+cd weights
+ln -s classifier__*.pt view_classifier.pt
+ln -s maskrcnn__*.pt   maskrcnn.pt
+cd ..
+```
+
+#### 2. SegmentAnyTooth — code and weights are licensed separately
+
+The **code** is MIT. It is not redistributed here only because it is upstream's, so
+clone it yourself; no agreement and no email are needed. It must land in
+`inputs/SegmentAnyTooth`, with `sam.py` at the top level of that directory:
+
+```bash
+git clone https://github.com/thangngoc89/SegmentAnyTooth inputs/SegmentAnyTooth
+```
+
+The **weights** are covered by a separate non-commercial licence — email the
+maintainers. They arrive as a directory literally named `SegmentAnyTooth weights`
+(with the space); move it under `weights/` without renaming it or flattening it:
+
+```bash
+mv ~/Downloads/'SegmentAnyTooth weights' weights/
+```
+
+#### 3. Link them
+
+```bash
+python scripts/fetch_third_party.py
+```
+
+This downloads nothing and accepts no licence. It links the two locations above into
+`third_party/`, records their SHA-256, creates `third_party/torch_home`, and exits
+non-zero naming anything still missing. `SAT_CODE_DIR` and `SAT_WEIGHT_DIR` override
+the source locations if you keep them elsewhere; `cd app && make check` then confirms
+every file the enabled segmenters need.
+
+The viewer applies no ROI stage, so no ROI-detector, geometric-prior or SAM 3 weights
+are needed. SAM 3 is used only by the ROI arm of the benchmark, and
+`fetch_third_party.py` therefore treats it as optional.
 
 ---
 
@@ -61,9 +127,16 @@ weights are needed.
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements-lock.txt
-python scripts/fetch_third_party.py     # link SegmentAnyTooth weights (obtain them by email)
+pip install -r requirements-lock.txt    # pins the +cu126 torch index itself
+python scripts/fetch_third_party.py     # link the SegmentAnyTooth code and weights
 ```
+
+The lock file carries its own `--extra-index-url`, because the pinned torch and
+torchvision wheels have a `+cu126` local version and are not on PyPI. It installs
+everything the viewer needs, Flask included.
+
+The third step assumes the weights and the vendor code are already in place — see
+[Where everything goes](#where-everything-goes) above.
 
 **Run the viewer** (API on :5000, UI on <http://localhost:5173>):
 
@@ -84,7 +157,9 @@ rather than failing on the first clinical image. To serve one segmenter only:
 from iop_compass.segmentation.segmentanytooth_adapter import SegmentAnyToothRunner
 from iop_compass.segmentation.postprocessing import PostProcessParams, postprocess_instances
 
-runner = SegmentAnyToothRunner(weight_dir="third_party/sat_weights", device="cuda")
+runner = SegmentAnyToothRunner(weight_dir="third_party/sat_weights",
+                               code_dir="third_party/segmentanytooth_src",
+                               device="cuda")
 prediction = runner.predict(image_bgr, view_label="frontal")
 masks, fdis, scores, _ = postprocess_instances(
     prediction.masks, prediction.fdis, prediction.scores,

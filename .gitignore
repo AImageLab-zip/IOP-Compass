@@ -40,7 +40,10 @@ logs/
 *.ckpt
 *.onnx
 
-# Data and third-party assets, linked in by scripts/fetch_third_party.py
+# Download targets and third-party assets.  weights/ holds the release checkpoints
+# and the SegmentAnyTooth weight directory, inputs/ the vendored MIT source; both are
+# put in place by hand and linked into third_party/ by scripts/fetch_third_party.py.
+weights/
 inputs/
 third_party/
 

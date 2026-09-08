@@ -15,14 +15,22 @@ glove/retractor heuristic - is byte-for-byte the original.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 import cv2
 import numpy as np
 import torch
 from PIL import Image
-from sam3.model.sam3_image_processor import Sam3Processor
-from sam3.model_builder import build_sam3_image_model
+
+if TYPE_CHECKING:  # pragma: no cover - the vendored package is import-time optional
+    from sam3.model.sam3_image_processor import Sam3Processor
+
+# The vendored ``sam3`` package is linked in by ``scripts/fetch_third_party.py`` and is
+# needed only by the R3 ROI strategy, which the released viewer never runs.  Importing
+# it here would make the whole ``iop_compass.roi`` package - and the test suite that
+# stubs this module - unimportable without it, so it is imported inside
+# :func:`build_sam3`, the only place it is used.  ``sam3_roi`` already defers its own
+# import of this module for the same reason.
 
 
 @dataclass
@@ -65,6 +73,9 @@ def build_sam3(
     upstream builder downloads ``facebook/sam3`` from Hugging Face at runtime,
     which is neither reproducible nor available on a compute node.
     """
+    from sam3.model.sam3_image_processor import Sam3Processor
+    from sam3.model_builder import build_sam3_image_model
+
     dev = device or ("cuda" if torch.cuda.is_available() else "cpu")
     model = build_sam3_image_model(
         device=dev,

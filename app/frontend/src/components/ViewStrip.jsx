@@ -15,6 +15,29 @@ function ordered(images) {
   );
 }
 
+/**
+ * Whether these photographs were taken through an intraoral mirror.
+ *
+ * It is not cosmetic: ticking it makes the backend flip each image on ingest, so the
+ * view classifier and SegmentAnyTooth's per-view detectors see the left/right
+ * convention the cohort was annotated in. That is what keeps the FDI *numbers* right
+ * on a mirror acquisition rather than only the view's name. Locked once a case is
+ * open, because it is applied at upload and cannot be changed retroactively.
+ */
+function MirrorToggle({ value, onChange, locked }) {
+  return (
+    <label className={`mirror ${locked ? "mirror--locked" : ""}`}>
+      <input
+        type="checkbox"
+        checked={value}
+        disabled={locked}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+      <span className="mirror__text">Acquired through a mirror</span>
+    </label>
+  );
+}
+
 function UploadZone({ onFiles, compact }) {
   const inputRef = useRef(null);
   const [over, setOver] = useState(false);
@@ -68,6 +91,8 @@ export default function ViewStrip({
   onFiles,
   instances,
   constrained,
+  mirrorAcquisition,
+  onMirrorAcquisitionChange,
 }) {
   return (
     <aside className="pane pane--left">
@@ -111,6 +136,11 @@ export default function ViewStrip({
 
       <div className="pane__footer">
         {images.length > 0 && <CaseSummary images={images} instances={instances} />}
+        <MirrorToggle
+          value={mirrorAcquisition}
+          onChange={onMirrorAcquisitionChange}
+          locked={images.length > 0}
+        />
         <UploadZone onFiles={onFiles} compact={images.length > 0} />
       </div>
     </aside>
@@ -153,4 +183,4 @@ function CaseSummary({ images, instances }) {
   );
 }
 
-export { UploadZone };
+export { MirrorToggle, UploadZone };

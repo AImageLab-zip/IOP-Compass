@@ -133,6 +133,18 @@ class SegmentAnyToothRunner:
             self._yolo[key] = YOLO(model=str(path))
         return self._yolo[key]
 
+    def load(self) -> None:
+        """Materialise every cached model now.
+
+        ``__init__`` only records paths, so without this the first ``predict`` pays
+        for the SAM-HQ encoder and a YOLO11 detector.  A caller that warms up before
+        serving (``app/backend/pipeline.py``) wants that cost up front.  Only four
+        detectors exist: the left view reuses the right one on a flipped image.
+        """
+        self._get_sam()
+        for sat_view in ("front", "upper", "lower", "right"):
+            self._get_yolo(sat_view)
+
     def weight_checksums(self) -> dict[str, str]:
         from ..data.adapter import sha256_file
 

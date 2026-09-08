@@ -21,6 +21,9 @@ dependencies = [
     "Pillow>=10",
     "pycocotools>=2.0.8",
     "tabulate>=0.9",
+    # the viewer backend in app/
+    "flask>=3.0",
+    "flask-cors>=4.0",
     # SegmentAnyTooth's own stack
     "ultralytics>=8.3.116",
     "segment-anything-hq==0.3",
@@ -41,7 +44,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "ruff>=0.6"]
+dev = ["pytest>=8", "ruff>=0.6,<0.13"]
 
 [project.urls]
 Repository = "https://github.com/AImageLab-zip/IOP-Compass"

@@ -106,14 +106,18 @@ class Settings:
         if not self.classifier_weights.is_file():
             problems.append(
                 f"view classifier checkpoint not found: {self.classifier_weights} "
-                f"(set {WEIGHT_ENV['classifier']})"
+                f"(set {WEIGHT_ENV['classifier']}, or rename/symlink the release "
+                "checkpoint to this name -- it is distributed under its training "
+                "run's name, not this one)"
             )
 
         if "sat" in segmenters:
             if not self.sat_code_dir.is_dir():
                 problems.append(
                     f"SegmentAnyTooth source not found: {self.sat_code_dir} "
-                    f"(set {WEIGHT_ENV['sat_code']})"
+                    f"(set {WEIGHT_ENV['sat_code']}; the code is MIT and can be "
+                    "cloned from github.com/thangngoc89/SegmentAnyTooth -- only the "
+                    "weights need the licence agreement)"
                 )
             for name in SAT_WEIGHT_FILES:
                 if not (self.sat_weight_dir / name).is_file():
@@ -125,7 +129,9 @@ class Settings:
         if "mask-rcnn" in segmenters and not self.maskrcnn_weights.is_file():
             problems.append(
                 f"Mask R-CNN checkpoint not found: {self.maskrcnn_weights} "
-                f"(set {WEIGHT_ENV['maskrcnn']})"
+                f"(set {WEIGHT_ENV['maskrcnn']}, or rename/symlink the release "
+                "checkpoint to this name -- it is distributed under its training "
+                "run's name, not this one)"
             )
 
         if not self.postprocessing_config.is_file():
